@@ -1,0 +1,44 @@
+# ********************************************************************************************************************
+# M3200 EXAMPLE
+# ********************************************************************************************************************
+# example.yaml - the smallest useful M3200 config: reads the sensor and shows the values in the log
+#
+# Initial coding: 20261101        jbuck2005
+#
+# Add wifi:, api: and ota: (see full_example.yaml) to see the values in Home Assistant.
+
+esphome:                                                                        # core settings
+  name: m3200-pressure                                                          # device name (lowercase and dashes only)
+
+esp32:                                                                          # the chip we are building for
+  board: esp32dev                                                               # generic ESP32 dev board
+  framework:
+    type: esp-idf                                                               # Espressif's own framework (ESPHome's default for ESP32)
+
+logger:                                                                         # log to USB serial (level DEBUG) - readings show up here
+
+external_components:                                                            # code that is not built into ESPHome
+  - source: github://jbuck2005/te-m3200@v1.0.0                                  # this repo, pinned release (see README: Versions)
+    components: [m3200]                                                         # only pull in the m3200 component
+
+i2c:                                                                            # the I2C bus the M3200 is on
+  sda: GPIO21                                                                   # green wire (ESP32 default SDA)
+  scl: GPIO22                                                                   # white wire (ESP32 default SCL)
+  frequency: 100kHz                                                             # standard speed (the M3200 handles 100..400 kHz)
+
+sensor:
+  - platform: m3200                                                             # the component from external_components: above
+    address: 0x28                                                               # ordering-code address digit 0 (1=0x36 2=0x46 3=0x48 4=0x51)
+    max_pressure: 100                                                           # M32JM-000105-100PG -> 0..100 psi
+    # min_pressure: -14.7                                                       # compound (…C) parts
+    # sleep_mode: false                                                         # on by default; parts with sleep digit = 0 can turn it off
+    update_interval: 5s                                                         # take a reading every 5 seconds
+    pressure:
+      name: "Pressure"                                                          # entity name
+      unit_of_measurement: psi                                                  # same unit as max_pressure (bar, kPa ...)
+      filters:
+        - sliding_window_moving_average:
+            window_size: 6                                                      # average of the last 6 readings (30 s)
+            send_every: 1                                                       # publish the new average after every reading
+    temperature:
+      name: "Sensor Temperature"                                                # entity name

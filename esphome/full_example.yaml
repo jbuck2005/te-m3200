@@ -1,0 +1,172 @@
+# ********************************************************************************************************************
+# M3200 PRESSURE MONITOR
+# ********************************************************************************************************************
+# full_example.yaml - M3200 on an ESP32, published to Home Assistant (native API) and to an MQTT broker at the same time
+#
+# Initial coding: 20261101        jbuck2005
+#
+# Written for : M32JM-000105-100PG (0..100 psi gauge, sleep mode, address 0x28) - change max_pressure to suit your part
+#
+# Copy secrets.example.yaml to secrets.yaml and fill it in, then:
+#   esphome run full_example.yaml
+
+# ********************************************************************************************************************
+# SUBSTITUTIONS
+# ********************************************************************************************************************
+substitutions:                                                                  # variables used below as ${...} - change them here once
+  name: m3200-pressure                                                          # hostname + MQTT topic prefix (lowercase and dashes only)
+  friendly_name: Pressure Sensor                                                # name shown in Home Assistant
+  sda_pin: GPIO21                                                               # I2C data pin (ESP32 default)
+  scl_pin: GPIO22                                                               # I2C clock pin (ESP32 default)
+
+# ********************************************************************************************************************
+# BOARD
+# ********************************************************************************************************************
+esphome:                                                                        # core settings
+  name: ${name}                                                                 # device shows up as m3200-pressure.local on the network
+  friendly_name: ${friendly_name}                                               # prefix for the entity names in Home Assistant
+
+esp32:                                                                          # the chip we are building for
+  board: esp32dev                                                               # generic ESP32 dev board
+  framework:
+    type: esp-idf                                                               # Espressif's own framework (ESPHome's default for ESP32)
+
+# ********************************************************************************************************************
+# M3200 COMPONENT
+# ********************************************************************************************************************
+external_components:                                                            # code that is not built into ESPHome
+  - source: github://jbuck2005/te-m3200@v1.0.0                                  # this repo, pinned release (see README: Versions)
+    components: [m3200]                                                         # only pull in the m3200 component
+    refresh: 1d                                                                 # check GitHub for a newer version at most once a day
+  # Or from a local copy next to this file:
+  # - source:
+  #     type: local
+  #     path: components
+  #   components: [m3200]
+
+logger:                                                                         # log to USB serial and to the ESPHome logs view (level DEBUG)
+
+# ********************************************************************************************************************
+# NETWORK
+# ********************************************************************************************************************
+wifi:                                                                           # join your WiFi network
+  ssid: !secret wifi_ssid                                                       # !secret = read the value from secrets.yaml
+  password: !secret wifi_password
+  ap:                                                                           # if WiFi can't connect, start a hotspot instead
+    ssid: "${friendly_name} Fallback"                                           # hotspot name
+    password: !secret ap_password                                               # hotspot password - keep it different from your WiFi's
+
+captive_portal:                                                                 # web page on the fallback hotspot for entering new WiFi details
+
+ota:                                                                            # over-the-air firmware updates
+  - platform: esphome                                                           # updates from ESPHome Builder / the esphome command
+    encryption: {}                                                              # encrypted uploads using the api: key below; no separate password
+
+# ********************************************************************************************************************
+# HOME ASSISTANT
+# ********************************************************************************************************************
+# Home Assistant: entities show up automatically via the ESPHome integration.
+api:                                                                            # native connection to Home Assistant
+  encryption:
+    key: !secret api_encryption_key                                             # 32-byte base64 key - HA asks for it when you add the device
+
+# ********************************************************************************************************************
+# MQTT
+# ********************************************************************************************************************
+# MQTT runs alongside the API. Discovery is off so Home Assistant doesn't get a
+# second copy of every entity through its MQTT integration. Turn it on only if
+# you remove the api: block and want HA to use MQTT instead.
+#
+# Port 1883 is UNENCRYPTED: the username, password and every reading cross the network
+# in plain text. That's only OK on a network you trust. Otherwise use TLS: set port: 8883
+# and uncomment certificate_authority: below, pasting in the CA certificate (PEM) that
+# signed your broker's certificate.
+mqtt:
+  broker: !secret mqtt_broker                                                   # IP address or hostname of the broker
+  port: 1883                                                                    # standard (unencrypted) MQTT port - 8883 for TLS
+  # certificate_authority: |                                                    # TLS (esp-idf): the CA that signed the broker's certificate
+  #   -----BEGIN CERTIFICATE-----
+  #   ...
+  #   -----END CERTIFICATE-----
+  username: !secret mqtt_username
+  password: !secret mqtt_password
+  discovery: false                                                              # don't announce entities to HA over MQTT (the api: already does)
+  reboot_timeout: 0s                                                            # never reboot the monitor just because the broker is down
+  topic_prefix: ${name}                                                         # e.g. m3200-pressure/sensor/pressure/state
+  birth_message:                                                                # published when the device connects
+    topic: ${name}/status
+    payload: online
+  will_message:                                                                 # published by the broker if the device drops off
+    topic: ${name}/status
+    payload: offline
+
+# ********************************************************************************************************************
+# SENSORS
+# ********************************************************************************************************************
+i2c:                                                                            # the I2C bus the M3200 is on
+  sda: ${sda_pin}                                                               # green wire (4k7 pull-up to 3V3)
+  scl: ${scl_pin}                                                               # white wire (4k7 pull-up to 3V3)
+  frequency: 100kHz                                                             # standard speed (the M3200 handles 100..400 kHz)
+
+sensor:
+  - platform: m3200                                                             # the component from external_components: above
+    address: 0x28                                                               # ordering-code address digit 0
+    max_pressure: 100                                                           # M32JM-000105-100PG: 0..100 psi gauge
+    sleep_mode: true                                                            # "...0105": sleep digit = 1, so each read needs a measurement request
+    update_interval: 1s                                                         # take a reading every second
+    pressure:
+      name: "Pressure"                                                          # entity name in Home Assistant
+      unit_of_measurement: psi                                                  # same unit as max_pressure (bar, kPa ...)
+      id: pressure_psi                                                          # lets the bar sensor below use this value
+      # Plain topic for non-HA MQTT consumers (Node-RED, Grafana, etc.)
+      state_topic: ${name}/pressure
+      filters:
+        # Average 10 samples, then publish when it moves
+        # by 0.5 psi, or at least once a minute otherwise.
+        - sliding_window_moving_average:
+            window_size: 10                                                     # average of the last 10 readings (10 s)
+            send_every: 5                                                       # pass an average along every 5 readings (5 s)
+        - or:                                                                   # publish if either of these lets the value through:
+            - delta: 0.5                                                        # the average moved by 0.5 psi or more
+            - throttle: 60s                                                     # or a minute has passed since the last one
+    raw_pressure:                                                               # optional diagnostic: the 14-bit count (1000 = 0 %, 15000 = 100 %)
+      name: "Pressure Raw Counts"
+    status:                                                                     # optional diagnostic: ok / stale / frozen / fault / reserved / out of range / no answer
+      name: "Pressure Sensor Status"
+    temperature:
+      name: "Sensor Temperature"                                                # temperature at the sensor's diaphragm, close to the medium's
+      state_topic: ${name}/temperature
+      filters:
+        - sliding_window_moving_average:
+            window_size: 30                                                     # average of the last 30 readings (30 s)
+            send_every: 30                                                      # pass one average along every 30 s
+        - delta: 0.5                                                            # only publish when it changes by 0.5 °C or more
+
+  # Pressure in bar, for anyone who prefers metric.
+  - platform: copy                                                              # republishes every value pressure_psi publishes...
+    source_id: pressure_psi
+    name: "Pressure (bar)"
+    unit_of_measurement: bar
+    device_class: pressure
+    state_class: measurement                                                    # keep long-term statistics in HA
+    accuracy_decimals: 2                                                        # show 2 decimal places
+    state_topic: ${name}/pressure_bar
+    filters:
+      - multiply: 0.0689476                                                     # ...converted: 1 psi = 0.0689476 bar
+
+  - platform: wifi_signal                                                       # WiFi strength in dBm (-50 is great, -80 is poor)
+    name: "WiFi Signal"
+    update_interval: 60s
+    entity_category: diagnostic                                                 # listed under Diagnostic in HA, not on the main card
+
+  - platform: uptime                                                            # seconds since the last boot
+    name: "Uptime"
+    entity_category: diagnostic
+
+binary_sensor:
+  - platform: status                                                            # on = connected to Home Assistant
+    name: "Status"
+
+button:
+  - platform: restart                                                           # a button in HA that reboots the device
+    name: "Restart"
