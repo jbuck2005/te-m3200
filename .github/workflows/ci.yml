@@ -1,0 +1,94 @@
+# ********************************************************************************************************************
+# CI
+# ********************************************************************************************************************
+# ci.yml - the checks from .claude/CLAUDE.md, run on GitHub for every PR and every push to main
+#
+#   host-tests      tests/run.sh: decoder + Arduino class against the datasheet tables (no board needed)
+#   lint            ruff check on the ESPHome component (one of the checks esphome/esphome runs)
+#   arduino         both examples built for uno and esp32dev with PlatformIO
+#   esphome         tests/esphome/test.*.yaml validated and compiled on ESP32 (IDF + Arduino), ESP8266 and RP2040
+#
+# Actions minutes are free on public repos. The weekly run also builds against the ESPHome beta, so a
+# breaking ESPHome release shows up here before it reaches a device.
+
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  schedule:
+    - cron: "17 6 * * 1"                                                        # Mondays 06:17 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:                                                                    # a new push cancels the old run on the same branch
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  host-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - run: bash tests/run.sh
+
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: astral-sh/ruff-action@v3
+        with:
+          args: check
+          src: esphome/components
+
+  arduino:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        example: [BasicRead, AveragedRead]
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+      - uses: actions/cache@v4
+        with:
+          path: ~/.platformio
+          key: pio-arduino-${{ hashFiles('arduino/M3200/library.properties') }}
+          restore-keys: pio-arduino-
+      - run: pip install platformio
+      - run: >-
+          pio ci arduino/M3200/examples/${{ matrix.example }}/${{ matrix.example }}.ino
+          --lib arduino/M3200
+          --board uno
+          --board esp32dev
+
+  esphome:
+    runs-on: ubuntu-latest
+    continue-on-error: ${{ matrix.esphome == 'beta' }}                          # beta breakage is a heads-up, not a red PR
+    strategy:
+      fail-fast: false
+      matrix:
+        target: [esp32-idf, esp32-ard, esp8266-ard, rp2040-ard]
+        esphome: ${{ fromJSON(github.event_name == 'schedule' && '["stable","beta"]' || '["stable"]') }}
+    name: esphome (${{ matrix.target }}, ${{ matrix.esphome }})
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+      - name: Install ESPHome ${{ matrix.esphome }}
+        run: |
+          if [ "${{ matrix.esphome }}" = beta ]; then pip install --pre esphome; else pip install esphome; fi
+          echo "ESPHOME_VERSION=$(esphome version | awk '{print $2}')" >> "$GITHUB_ENV"
+      - uses: actions/cache@v4                                                  # toolchains: a cold ESP-IDF download is several minutes
+        with:
+          path: ~/.platformio
+          key: pio-${{ matrix.target }}-${{ env.ESPHOME_VERSION }}
+          restore-keys: pio-${{ matrix.target }}-
+      - run: esphome config tests/esphome/test.${{ matrix.target }}.yaml
+      - run: esphome compile tests/esphome/test.${{ matrix.target }}.yaml

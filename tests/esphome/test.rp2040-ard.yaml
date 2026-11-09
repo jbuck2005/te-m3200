@@ -1,0 +1,10 @@
+# Raspberry Pi Pico / RP2040 (Arduino is its only framework). See common.yaml.
+substitutions:
+  sda_pin: GPIO4
+  scl_pin: GPIO5
+
+rp2040:
+  board: rpipicow
+
+packages:
+  common: !include common.yaml

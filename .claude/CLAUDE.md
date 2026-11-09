@@ -35,11 +35,17 @@ doesn't understand.
   `Arduino + ESPHome: …`, `Docs: …`.
 - **Document design choices with the reason.** Put the *why* in the README,
   in code comments, or both, next to the thing it explains.
-- **There is no CI, and don't add any.** It's over budget. Don't wait on GitHub
-  checks and don't add GitHub Actions workflows. Verify locally before pushing:
+- **CI runs the checks on every PR** (`.github/workflows/ci.yml`, added 2026-11-09).
+  The earlier "no CI, it's over budget" rule is gone: Actions minutes are free on
+  public repos. A PR is ready only when CI is green. It runs:
   - `tests/run.sh` (host-side unit tests for the decoder and the Arduino class)
-  - Arduino build for `uno` and `esp32dev` (for example with `pio ci`)
-  - `esphome config` and `esphome compile` on `esphome/example.yaml`
+  - `ruff check` on `esphome/components`
+  - Arduino build of both examples for `uno` and `esp32dev` (`pio ci`)
+  - `esphome config` and `esphome compile` on `tests/esphome/test.*.yaml`
+    (ESP32 IDF + Arduino, ESP8266, RP2040), built from the checkout, not GitHub
+  Run `tests/run.sh` locally before pushing anyway; it takes seconds.
+- **Keep `tests/esphome/common.yaml` using every option.** When a YAML option is
+  added to `sensor.py`, add it there too, or CI never compiles its codegen.
 - **Assistants can't test on real hardware.** Say so in PRs that change driver
   behaviour.
 

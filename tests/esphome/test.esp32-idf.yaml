@@ -1,0 +1,12 @@
+# ESP32, ESP-IDF framework (ESPHome's default for ESP32). See common.yaml.
+substitutions:
+  sda_pin: GPIO21
+  scl_pin: GPIO22
+
+esp32:
+  board: esp32dev
+  framework:
+    type: esp-idf
+
+packages:
+  common: !include common.yaml

@@ -1,0 +1,7 @@
+# Opens a PR when an action used in .github/workflows has a new version, so the pinned @vN tags don't go stale.
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly
