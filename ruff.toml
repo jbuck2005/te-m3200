@@ -1,0 +1,6 @@
+# Lint settings for esphome/components (run by CI, see .github/workflows/ci.yml, which also pins the ruff version).
+
+[lint]
+ignore = [
+    "I001",                                                                     # import sorting: it also rewrites the aligned end-of-line comments, so it can never pass here.
+]                                                                               # Imports are kept in ESPHome's order by hand; an upstream PR gets ruff's formatting anyway.

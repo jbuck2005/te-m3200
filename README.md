@@ -1,5 +1,7 @@
 # M3200 pressure sensor drivers
 
+[![CI](https://github.com/jbuck2005/te-m3200/actions/workflows/ci.yml/badge.svg)](https://github.com/jbuck2005/te-m3200/actions/workflows/ci.yml)
+
 Drivers for the TE Connectivity **M3200** pressure transducer with I2C output (`M32J…` parts).
 The M3200 is a one-piece stainless-steel transducer for water, oil, gas and other media.
 The digital version reports 14-bit pressure and 11-bit temperature over I2C, at 2.7–5.0 V.
@@ -275,8 +277,16 @@ device's next build. Tags follow semantic versioning: `v1.0.x` for fixes, `v1.x.
 - It also checks that the two copies of `m3200_decode.h` (Arduino library and ESPHome component)
   are identical.
 
-Run it before pushing changes to either driver. To also check that everything builds, compile the
-examples (`pio ci` or the Arduino IDE) and run `esphome config` / `esphome compile` on `esphome/example.yaml`.
+Run it before pushing changes to either driver.
+
+[CI](.github/workflows/ci.yml) runs it on every pull request and push to `main`, together with
+`ruff check`, an Arduino build of both examples for `uno` and `esp32dev`, and an ESPHome compile of
+[`tests/esphome`](tests/esphome) on ESP32 (ESP-IDF and Arduino), ESP8266 and RP2040. The ESPHome
+tests build the component from the checkout, so a PR is tested with its own code. A weekly run
+also builds against the ESPHome beta, to catch an ESPHome change before it reaches a device.
+
+To build locally: `esphome compile tests/esphome/test.esp32-idf.yaml`, and
+`pio ci arduino/M3200/examples/BasicRead/BasicRead.ino --lib arduino/M3200 --board uno`.
 
 ## Datasheets
 

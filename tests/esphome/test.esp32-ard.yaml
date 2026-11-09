@@ -1,0 +1,12 @@
+# ESP32, Arduino framework. See common.yaml.
+substitutions:
+  sda_pin: GPIO21
+  scl_pin: GPIO22
+
+esp32:
+  board: esp32dev
+  framework:
+    type: arduino
+
+packages:
+  common: !include common.yaml

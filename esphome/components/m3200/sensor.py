@@ -12,18 +12,18 @@
 import logging                                                                  # for config-time warnings
 
 import esphome.codegen as cg                                                    # writes the C++ code
-from esphome.components import i2c, sensor, text_sensor                                      # helpers for the i2c bus and for sensor entities
+from esphome.components import i2c, sensor, text_sensor                         # helpers for the i2c bus and for sensor entities
 import esphome.config_validation as cv                                          # YAML checks (cv.float_, cv.boolean ...)
 from esphome.const import (                                                     # option names and units shared by all ESPHome components
     CONF_ID,                                                                    # the component's id:
     CONF_PRESSURE,                                                              # "pressure"
-    CONF_TEMPERATURE,                                                           # "temperature"
-    DEVICE_CLASS_PRESSURE,                                                      # tells Home Assistant this is a pressure
     CONF_STATUS,                                                                # "status"
-    DEVICE_CLASS_TEMPERATURE,
-    ENTITY_CATEGORY_DIAGNOSTIC,                                                 # listed under Diagnostic in HA                                                   # tells Home Assistant this is a temperature
-    STATE_CLASS_MEASUREMENT,                                                    # tells Home Assistant to keep long-term statistics
+    CONF_TEMPERATURE,                                                           # "temperature"
     CONF_UNIT_OF_MEASUREMENT,                                                   # "unit_of_measurement"
+    DEVICE_CLASS_PRESSURE,                                                      # tells Home Assistant this is a pressure
+    DEVICE_CLASS_TEMPERATURE,                                                   # tells Home Assistant this is a temperature
+    ENTITY_CATEGORY_DIAGNOSTIC,                                                 # listed under Diagnostic in HA
+    STATE_CLASS_MEASUREMENT,                                                    # tells Home Assistant to keep long-term statistics
     UNIT_CELSIUS,                                                               # "°C"
 )
 

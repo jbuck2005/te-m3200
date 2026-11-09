@@ -1,0 +1,63 @@
+# ********************************************************************************************************************
+# M3200 CI TEST CONFIG
+# ********************************************************************************************************************
+# common.yaml - shared by every tests/esphome/test.<platform>-<framework>.yaml. CI compiles each of those.
+#
+# The layout copies ESPHome's own tests/components/<name>/ folder, so this file moves upstream with
+# few changes if the component is ever submitted to esphome/esphome.
+#
+# Builds the component from this checkout (not from GitHub), so a PR is tested with its own code.
+
+esphome:
+  name: m3200-ci                                                                # never flashed, only compiled
+
+logger:
+
+external_components:
+  - source:
+      type: local
+      path: ../../esphome/components                                            # this checkout's component
+    components: [m3200]
+
+i2c:
+  id: i2c_bus
+  sda: ${sda_pin}                                                               # set by the test.<platform>.yaml file
+  scl: ${scl_pin}
+  frequency: 100kHz
+
+sensor:
+  # Defaults only: the smallest config a user can write.
+  - platform: m3200
+    i2c_id: i2c_bus
+    max_pressure: 100
+    pressure:
+      name: "Pressure Defaults"
+      unit_of_measurement: psi
+
+  # Every option set, so each set_...() call in sensor.py is generated and compiled.
+  - platform: m3200
+    i2c_id: i2c_bus
+    address: 0x36
+    min_pressure: -14.7                                                         # compound part
+    max_pressure: 200
+    sleep_mode: false
+    measurement_delay: 20ms
+    max_failures: 5
+    min_valid_counts: 0                                                         # plausibility check off
+    max_valid_counts: 16383
+    zero_counts: 1010
+    span_counts: 14990
+    update_interval: 5s
+    pressure:
+      name: "Pressure All Options"
+      unit_of_measurement: bar
+      filters:
+        - sliding_window_moving_average:
+            window_size: 5
+            send_every: 1
+    raw_pressure:
+      name: "Pressure Raw Counts"
+    status:
+      name: "Pressure Sensor Status"
+    temperature:
+      name: "Sensor Temperature"

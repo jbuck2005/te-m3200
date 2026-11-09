@@ -5,3 +5,4 @@ __pycache__/
 backup/
 .claude/*
 !.claude/CLAUDE.md
+.esphome/
