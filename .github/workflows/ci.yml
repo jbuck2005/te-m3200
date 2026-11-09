@@ -32,13 +32,13 @@ jobs:
   host-tests:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
       - run: bash tests/run.sh
 
   lint:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
       - uses: astral-sh/ruff-action@v3
         with:
           version: "0.17.4"                                                     # pinned, so a new ruff release can't fail an unchanged PR (Dependabot doesn't bump this)
@@ -52,7 +52,7 @@ jobs:
       matrix:
         example: [BasicRead, AveragedRead]
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
       - uses: actions/setup-python@v6
         with:
           python-version: "3.12"
@@ -78,7 +78,7 @@ jobs:
         esphome: ${{ fromJSON(github.event_name == 'schedule' && '["stable","beta"]' || '["stable"]') }}
     name: esphome (${{ matrix.target }}, ${{ matrix.esphome }})
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
       - uses: actions/setup-python@v6
         with:
           python-version: "3.12"
