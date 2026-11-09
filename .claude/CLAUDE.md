@@ -28,8 +28,23 @@ doesn't understand.
 
 ## How changes are delivered
 
-- **One PR per change, and the owner merges it.** Never merge your own PR: `main`
-  reaches real devices, and nothing else checks a change before it's public.
+- **One PR per change, and the owner decides when it merges.** Never merge a PR or
+  turn on its auto-merge unless the owner asks for that PR: `main` reaches real
+  devices, and CI can't check behaviour on the hardware.
+- **Turn on auto-merge instead of waiting for CI.** When the owner says "merge when
+  green", enable auto-merge on the PR with the **merge** method (never squash).
+  GitHub merges it once CI passes. Don't poll CI or set timers to watch it.
+  **"merge" and "merge it" mean the same as "merge when green"** (the owner's
+  shorthand): turn on auto-merge, even if CI has already passed, never a direct
+  merge that skips the checks. They cover only the PR being discussed; if it's not
+  clear which PR, ask.
+- **`main` is protected** by the ruleset "main: CI must pass" (2026-11-09): all 8 PR
+  jobs must pass (reported by GitHub Actions only), and force-pushes and deleting
+  `main` are blocked. So every change goes through a PR. PRs don't have to be up
+  to date with `main`, so Dependabot PRs don't need a rebase after every merge.
+  **If a CI job is renamed or added, update the ruleset's check list in the same
+  change** (Settings → Rules), or PRs wait forever for a check that no longer runs.
+  The weekly beta builds aren't required: they don't run on PRs.
 - **Use merge commits, not squash.** A squash merge once broke later pushes to
   a reused branch. Merge commits take the PR title.
 - **PR titles say what the change does.** Never a step number or a generic
@@ -39,7 +54,7 @@ doesn't understand.
   in code comments, or both, next to the thing it explains.
 - **CI runs the checks on every PR** (`.github/workflows/ci.yml`, added 2026-11-09).
   The earlier "no CI, it's over budget" rule is gone: Actions minutes are free on
-  public repos. A PR is ready only when CI is green. It runs:
+  public repos. A PR can only merge when CI is green. It runs:
   - `tests/run.sh` (host-side unit tests for the decoder and the Arduino class)
   - `ruff check` on `esphome/components`
   - Arduino build of both examples for `uno` and `esp32dev` (`pio ci`)
