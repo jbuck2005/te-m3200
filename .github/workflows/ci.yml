@@ -39,6 +39,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
+      - name: No secrets files                                                  # last line of defence: a pushed secret is already public, so rotate it
+        run: "! git ls-files | grep -E '(^|/)secrets\\.ya?ml$'"
       - uses: astral-sh/ruff-action@v3
         with:
           version: "0.17.4"                                                     # pinned, so a new ruff release can't fail an unchanged PR (Dependabot doesn't bump this)

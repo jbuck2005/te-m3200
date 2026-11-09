@@ -6,3 +6,9 @@ backup/
 .claude/*
 !.claude/CLAUDE.md
 .esphome/
+
+# Real credentials, in any folder. The repo is public: once pushed, a secret is exposed for good.
+# Copy esphome/secrets.example.yaml to make one. .githooks/pre-commit also refuses them if forced with git add -f
+# (turn it on once per clone: git config core.hooksPath .githooks).
+secrets.yaml
+secrets.yml
