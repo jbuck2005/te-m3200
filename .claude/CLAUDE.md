@@ -34,6 +34,10 @@ doesn't understand.
 - **Turn on auto-merge instead of waiting for CI.** When the owner says "merge when
   green", enable auto-merge on the PR with the **merge** method (never squash).
   GitHub merges it once CI passes. Don't poll CI or set timers to watch it.
+  **"merge" and "merge it" mean the same as "merge when green"** (the owner's
+  shorthand): turn on auto-merge, even if CI has already passed, never a direct
+  merge that skips the checks. They cover only the PR being discussed; if it's not
+  clear which PR, ask.
 - **`main` is protected** by the ruleset "main: CI must pass" (2026-11-09): all 8 PR
   jobs must pass (reported by GitHub Actions only), and force-pushes and deleting
   `main` are blocked. So every change goes through a PR. PRs don't have to be up
