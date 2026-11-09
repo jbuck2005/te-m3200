@@ -22,7 +22,9 @@ doesn't understand.
 
 - The repo is public. Nothing home-specific belongs in it: no IPs, hostnames, paths,
   names or credentials. Use `esphome/secrets.example.yaml` placeholders.
-- `esphome/secrets.yaml` holds real secrets and is git-ignored. Never commit it.
+- `esphome/secrets.yaml` holds real secrets. `secrets.yaml` is git-ignored in every
+  folder; `.githooks/pre-commit` refuses it even with `git add -f`, and CI fails if one
+  is tracked. Never commit it, never read it, and never weaken these guards.
 
 ## How changes are delivered
 

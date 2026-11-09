@@ -1,0 +1,12 @@
+#!/bin/sh
+# Refuses any commit that stages a secrets.yaml / secrets.yml, in any folder.
+# Backstop for .gitignore, which `git add -f` bypasses. Git doesn't run repo hooks on its own; turn this on once per clone:
+#   git config core.hooksPath .githooks
+
+found=$(git diff --cached --name-only --diff-filter=ACMR | grep -E '(^|/)secrets\.ya?ml$')
+if [ -n "$found" ]; then
+  echo "pre-commit: refusing to commit real secrets (this repo is public):" >&2
+  echo "$found" | sed 's/^/  /' >&2
+  echo "Unstage with: git restore --staged <file>" >&2
+  exit 1
+fi
